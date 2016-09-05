@@ -1,0 +1,194 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ReadAndWriteFile
+{
+    class ReadFileToTable
+    {
+        static void Main(string[] args)
+        {
+            const int MAX_ROW = 10000;
+            const String FOLDER_PATH = "c:/Temp";
+
+            // ＤＢ接続文字列を定義（ＤＢ環境に合わせること！）
+            string constr = "Persist Security Info=False;Integrated Security=true;Initial Catalog=BTC9;server=(local)";
+
+            using (SqlConnection con = new SqlConnection(constr))
+            {
+                con.Open();
+
+                ExcuteMethod(con, MAX_ROW, FOLDER_PATH);
+
+                con.Close();
+            }
+        }
+
+        private static void ExcuteMethod(SqlConnection con, int MAX_ROW, String FOLDER_PATH)
+        {
+            // DataTable型のデータ格納用の変数を
+            DataTable dt = null;
+
+            SqlTransaction transaction = null;
+
+            foreach (KeyValuePair<string, string> entry in fileList())
+            {
+                dt = GetTemplateTable(con, entry.Key, GetTableColumnInfoSQL(entry.Key));
+
+                // １行のデータを格納する変数
+                Object[] currentRow = new Object[dt.Columns.Count];
+
+                try
+                {
+                    // トランザクション開始
+                    transaction = con.BeginTransaction();
+
+                    // 対象テーブルを削除する
+                    using (SqlCommand cmd = new SqlCommand("truncate table " + entry.Key, con, transaction))
+                    {
+                        cmd.ExecuteNonQuery();
+                    }
+
+                    // 対象テーブルを登録する
+                    using (SqlBulkCopy bulkCopy = new SqlBulkCopy(con, SqlBulkCopyOptions.TableLock, transaction))
+                    {
+                        // 対象データを登録するテーブル名を設定
+                        bulkCopy.DestinationTableName = entry.Key;
+
+                        bulkCopy.BatchSize = 10000;
+                        bulkCopy.NotifyAfter = 10000;
+
+                        using (StreamReader reader = new StreamReader(String.Format("{0}/{1}_{2}.tsv", FOLDER_PATH, entry.Key, DateTime.Now.ToString("yyyyMMdd"), Encoding.UTF8)))
+                        {
+                            int rowCount = 0;
+                            while (reader.Peek() >= 0)
+                            {
+                                currentRow = reader.ReadLine().Split('\t');
+                                dt.Rows.Add(currentRow);
+
+                                // 行をカウント
+                                rowCount++;
+
+                                // 指定した件数以上
+                                if (rowCount >= MAX_ROW)
+                                {
+                                    bulkCopy.WriteToServer(dt);
+
+                                    // 初期化
+                                    dt.Clear();
+                                    rowCount = 0;
+                                }
+                            }
+
+                            // 指定した件数未満
+                            if (rowCount > 0)
+                            {
+                                bulkCopy.WriteToServer(dt);
+
+                                // 初期化
+                                dt.Clear();
+                                rowCount = 0;
+                            }
+
+                            reader.Close();
+                        }
+
+                    }
+
+                    // トランザクション終了
+                    transaction.Commit();
+                }
+                catch (Exception e)
+                {
+                    try
+                    {
+                        // トランザクションエラー
+                        transaction.Rollback();
+                    }
+                    catch
+                    {
+                        // エラー無視
+                    }
+
+                    Console.WriteLine(e.StackTrace);
+                }
+            }
+        }
+
+        private static String GetTableColumnInfoSQL(String tableName)
+        {
+            StringBuilder sql = new StringBuilder();
+
+            sql.Append(" SELECT ");
+            sql.Append("    TBL1.COLUMN_NAME AS COLUMN_NAME, ");
+            sql.Append(" 	CASE WHEN TBL2.COLUMN_NAME IS NOT NULL THEN '1' ELSE '0' END AS PK_TYPE, ");
+            sql.Append(" 	TBL1.DATA_TYPE AS COLUMN_TYPE, ");
+            sql.Append(" 	CASE WHEN TBL1.CHARACTER_MAXIMUM_LENGTH IS NOT NULL THEN TBL1.CHARACTER_MAXIMUM_LENGTH ELSE TBL1.NUMERIC_PRECISION END AS COLUMN_LENGTH, ");
+            sql.Append(" 	CASE WHEN UPPER(TBL1.IS_NULLABLE) = 'NO' THEN '1' ELSE '0' END AS NULL_TYPE ");
+            sql.Append(" FROM ");
+            sql.Append("    INFORMATION_SCHEMA.COLUMNS AS TBL1 ");
+            sql.Append(" 	LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE AS TBL2 ");
+            sql.Append(" 			ON  TBL1.TABLE_SCHEMA = TBL2.TABLE_SCHEMA ");
+            sql.Append(" 			AND	TBL1.TABLE_NAME = TBL2.TABLE_NAME ");
+            sql.Append(" 			AND TBL1.COLUMN_NAME = TBL2.COLUMN_NAME ");
+            sql.Append(" 			AND OBJECTPROPERTY(OBJECT_ID(CONSTRAINT_NAME), 'IsPrimaryKey') = 1 ");
+            sql.Append(" WHERE ");
+            sql.AppendFormat(" 	TBL1.TABLE_NAME = '{0}' ", tableName);
+            sql.Append(" ORDER BY ");
+            sql.Append(" 	TBL1.ORDINAL_POSITION ");
+
+            return sql.ToString();
+        }
+
+        #region "実行処理"
+        private static DataTable GetTemplateTable(SqlConnection con, String tableName, String sql)
+        {
+            DataTable dt = new DataTable();
+            dt.TableName = tableName;
+            dt.Locale = System.Globalization.CultureInfo.InvariantCulture;
+
+            using (SqlCommand cmd = new SqlCommand(sql))
+            {
+                cmd.Connection = con;
+
+                using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.KeyInfo))
+                {
+                    while (reader.Read())
+                    {
+                        dt.Columns.Add(reader["COLUMN_NAME"].ToString(), Type.GetType("System.String"));
+                    }
+                    reader.Close();
+                }
+            }
+
+            return dt;
+        }
+        #endregion
+
+        #region "取り込み対象ファイル”
+        private static Dictionary<string, string> fileList()
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+
+            //  取り込みファイル１
+            dict.Add("m_company", "m_company_20160906.tsv");
+
+            //  取り込みファイル２
+            dict.Add("m_family", "m_family_20160906.tsv");
+
+            //  取り込みファイル３
+            dict.Add("m_kbn", "m_kbn_20160906.tsv");
+
+
+            // を１個ずつ追加すること！
+
+            return dict;
+        }
+        #endregion
+    }
+}
