@@ -1,0 +1,121 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ReadAndWriteFile
+{
+    class WriteFileFromTable
+    {
+        static void Main(string[] args)
+        {
+            const int MAX_ROW = 10000;
+            const String FOLDER_PATH = "c:/Temp";
+
+            // ＤＢ接続文字列を定義（ＤＢ環境に合わせること！）
+            string constr = "Persist Security Info=False;Integrated Security=true;Initial Catalog=BTC9;server=(local)";
+
+            using (SqlConnection con = new SqlConnection(constr))
+            {
+                con.Open();
+
+                ExcuteMethod(con, MAX_ROW, FOLDER_PATH);
+
+                con.Close();
+            }
+        }
+
+        #region "実行処理"
+        private static void ExcuteMethod(SqlConnection con, int maxRow, String folderPath)
+        {
+            foreach (KeyValuePair<string, string> entry in sqlList())
+            {
+                using (SqlCommand cmd = new SqlCommand(entry.Value))
+                {
+                    cmd.Connection = con;
+
+                    using (SqlDataReader reader = cmd.ExecuteReader(CommandBehavior.KeyInfo))
+                    {
+                        // 出力するファイル名を定義
+                        using (StreamWriter writer = new StreamWriter(String.Format("{0}/{1}_{2}.tsv", folderPath, entry.Key, DateTime.Now.ToString("yyyyMMdd"))))
+                        {
+
+                            StringBuilder sb = new StringBuilder(10000 * 100);
+                            int rowCount = 0;
+                            int columnLength = 0;
+                            while (reader.Read())
+                            {
+                                columnLength = reader.FieldCount;
+
+                                for (int i = 0; i < columnLength - 1; i++)
+                                {
+                                    if (i > 0)
+                                    {
+                                        sb.Append("\t"); // Tab区切り
+                                    }
+                                    sb.Append(reader[i]);
+                                }
+
+                                //改行コードを追加
+                                sb.Append(Environment.NewLine);
+
+                                // 行をカウント
+                                rowCount++;
+
+                                // 指定した件数以上
+                                if (rowCount >= maxRow)
+                                {
+                                    writer.Write(sb.ToString());
+
+                                    // 初期化
+                                    sb.Clear();
+                                    rowCount = 0;
+                                }
+                            }
+
+                            // 指定した件数未満
+                            if (rowCount > 0)
+                            {
+                                writer.Write(sb.ToString());
+
+                                // 初期化
+                                sb.Clear();
+                                rowCount = 0;
+                            }
+
+                            writer.Close();
+                        }
+
+                        reader.Close();
+                    }
+                }
+            }
+        }
+        #endregion
+
+        #region "出力対象テーブル”
+        private static Dictionary<string, string> sqlList()
+        {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+
+            // 出力するTable1
+            dict.Add("m_company", "SELECT * FROM dbo.m_company");
+
+            // 出力するTable2
+            dict.Add("m_family", "SELECT * FROM dbo.m_family");
+
+            // 出力するTable3
+            dict.Add("m_kbn", "SELECT * FROM dbo.m_kbn");
+
+
+            // 出力する対象テーブルを１個ずつ追加すること！
+
+            return dict;
+        }
+        #endregion
+    }
+}
