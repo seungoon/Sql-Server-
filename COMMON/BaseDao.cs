@@ -130,7 +130,7 @@ namespace BtcConvertPro.Common
         {
             // 組織2情報を登録する
             StringBuilder sql = new StringBuilder();
-            sql.AppendLine("INSERT INTO  w_vc_fc_convert ");
+            sql.AppendLine("INSERT INTO  TABLE1 ");
             sql.AppendLine("           ( company_id ");
             sql.AppendLine("           , old_seq ");
             sql.AppendLine("           , new_seq ");
