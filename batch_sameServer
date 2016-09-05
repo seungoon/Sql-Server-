@@ -1,0 +1,55 @@
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ConsoleApplication1
+{
+    class DaoMUser
+    {
+            // SQLServer
+            public void Select()
+            {
+                SqlConnection conn = new SqlConnection();
+                SqlCommand command = new SqlCommand();
+                DataTable dt = new DataTable();
+
+                //string colum1 = string.Empty;
+                //string colum2 = string.Empty;
+                //string colum3 = string.Empty;
+                //string colum4 = string.Empty;
+
+                conn.ConnectionString = @"Data Source=ETHAN\SQLEXPRESS1;Initial Catalog=TestDatabase;User Id=ETHAN\liyan_000;Password='';";
+                // 接続します。
+                conn.Open();
+
+                using (SqlDataAdapter adapter = new SqlDataAdapter())
+                {
+                    // SELECT文を設定します。
+                    command.Connection = conn;
+                command.CommandText = "Insert into AM_USER T1";
+                command.CommandText = "( C1,";
+                command.CommandText = "( C2,";
+                command.CommandText = "( C3,";
+                command.CommandText = "( C4";
+                command.CommandText = "Select";
+                command.CommandText = "colum1";
+                command.CommandText = "colum2";
+                command.CommandText = "colum3";
+                command.CommandText = "colum4";
+                command.CommandText = "From M_USER";
+
+                // SQLを実行します。
+                SqlDataReader reader = command.ExecuteReader();
+
+                // 接続を解除します。
+                conn.Close();
+
+                Console.ReadKey();
+                }
+        }
+    }
+}
