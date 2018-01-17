@@ -1,0 +1,48 @@
+DBリンク作成手順											
+
+０．SQL Server Management Studioからの設定方法。											
+　・ SQL Serverに接続して、サーバーオブジェクト->リンクサーバー->プロバイダーを開く											
+　・ OraOLEDB.Oracleをダブルクリック											
+　・ InProcess許可にチェックを付けてOKとする											
+　・ リンクサーバーで右クリックして、新しいリンクサーバーを作成											
+　・ 以下の様に設定してOKとする											
+											
+１．リンクサーバーを新規作成しる。
+　・ リンクサーバー（N)：　ORACLE       --SQL SERVERでのスキーマ名
+　・ プロバイダー（P)：　　Oracle Provider for OLE DB
+　・ 製品名（U)：　　　　　Oracle11     --任意の名
+　・ データソース（D)：　　LocalHost    --Oracleホスト名　
+　・ プロバイダー文字列（V)： testUser  --Oracleスキーマ名
+ 
+ 　それ以外の項目は空白。
+  
+ ２．セキュリティでOracleサーバーのユーザIDとパスワードを設定する。
+　・ リモートログイン（R)： testUser  --OracleユーザID
+　・ パスワード（P)： 　　　testUser  --Oracleパスワード
+										
+
+（終）
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
+											
