@@ -1,0 +1,24 @@
+１．Tableを確認・削除する。
+　・ IF OBJECT_ID ('削除対象テーブル名', 'U') IS NOT NULL
+ 　　　DROP TABLE '削除対象テーブル名';
+　　 GO
+
+２．Procedureを確認・削除する。
+　・ IF OBJECT_ID ('削除対象プロシージャ名', 'P') IS NOT NULL
+ 　　　DROP PROCEDURE '削除対象プロシージャ名';
+　　 GO
+ 
+３．Triggerを確認・削除する。
+　・ IF OBJECT_ID ('削除対象トリガー名', 'TR') IS NOT NULL
+ 　　　DROP TRIGGER '削除対象トリガー名';
+　　 GO
+
+４．Triggerを確認・削除する。
+　・ IF OBJECT_ID ('削除対象トリガー名', 'TR') IS NOT NULL
+ 　　　DROP TRIGGER '削除対象トリガー名';
+　　 GO
+ 
+５．Viewを確認・削除する。
+　・ IF OBJECT_ID ('削除対象ビュー名', 'V') IS NOT NULL
+ 　　　DROP VIEW '削除対象ビュー名';
+　　 GO
